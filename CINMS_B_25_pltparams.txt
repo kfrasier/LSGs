@@ -1,0 +1,19 @@
+%CINMS_B_25_pltparams.txt
+% eval(thisfile)
+
+dname = 'CINMS_B_25';
+navepd = 5760;
+B = [];
+
+
+
+
+ifile = 'CINMS_B_25_DailyAves.mat';		% input file name
+ipath = 'G:\My Drive\CINMS_B_df20_LTSA\CINMS_B_out';	% input file path
+
+sflag = 1;
+pflag = 1; 
+rm_fifo = 0;
+dctype = 0;
+
+av = [10 5000 10 120];	% plot axis vector  
