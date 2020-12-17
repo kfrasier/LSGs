@@ -66,12 +66,12 @@ while isempty(deplMatch) && iFile<=size(harpDataSummary,1)
     iFile = iFile+1;
 end
 if isempty(deplMatch)
-    error('Error, no matching deployment in HARP database)')
+    warning('Error, no matching deployment in HARP database)')
+    tfNum = [];
 else
     deplMatchIdx = iFile-1;
+    tfNum = harpDataSummary.PreAmp{deplMatchIdx};
 end
-
-tfNum = harpDataSummary.PreAmp{deplMatchIdx};
 
 % Search TFs folder for the appropriate preamp
 tfList = dir(TFsFolder);

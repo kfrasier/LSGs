@@ -306,5 +306,7 @@ if spflag
     print('-f750','-djpeg','-r600',fullfile(opath,ofile))
     ofile2 = 'SingleLSG.tif';
     print('-f750','-dtiff','-r600',fullfile(opath,ofile2))
+    ofile3 = 'SingleLSG.fig';
+    saveas(gca,fullfile(opath,ofile3))
 end
 
