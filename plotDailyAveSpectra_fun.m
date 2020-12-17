@@ -1,5 +1,5 @@
 function plotDailyAveSpectra_fun(infile,ptime,mpwrtf,freq,nmave,...
-        navepd,B,sflag,pflag,rm_fifo,dctype)
+        navepd,B,sflag,pflag,rm_fifo,dctype,av,dname,tf_file)
 %
 % based on plotDailyAveSpectra_180119.m
 %
@@ -31,7 +31,7 @@ function plotDailyAveSpectra_fun(infile,ptime,mpwrtf,freq,nmave,...
 % tf_file = []; % in case file doesn't have this, make empty one.
 % load(infile)
 % 
-[inpath,inname,ext] = fileparts(infile);
+[ipath,inname,ext] = fileparts(infile);
 name = strrep(inname,'_','\_');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

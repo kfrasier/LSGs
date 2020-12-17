@@ -21,11 +21,13 @@ clear variables
 global PARAMS
 
 % Load Harp data summary:
-harpDataSummaryCSV = 'C:\Users\Hosei\Desktop\HARPdataSummary_20200122.csv';
+harpDataSummaryCSV = 'C:\Users\HARP\Documents\GitHub\LSGs\HARPdataSummary_20200122.csv';
 harpDataSummary = readtable(harpDataSummaryCSV);
-outDir = 'I:\Shared drives\MBARC_All\LSGs\auto_200kHz';
-TFsFolder = 'I:\Shared drives\MBARC_TF';
-LTSAdir = 'I:\Shared drives\MBARC_All\LTSAs\SOCAL\N';
+outDir = 'M:\Shared drives\MBARC_All\LSGs\auto_200kHz';
+%TFsFolder = 'I:\Shared drives\MBARC_TF';
+
+TFsFolder = 'C:\Users\HARP\Documents\TFs';
+LTSAdir = 'M:\Shared drives\MBARC_All\LTSAs\SOCAL\N';
 [dirStem,siteName] = fileparts(LTSAdir);
 [~,projectName] = fileparts(dirStem);
 % initial changable parameters:
@@ -63,6 +65,7 @@ for iD = 1:length(dirList)
         % if not a directory, continue to next folder.
         continue
     end
+    sprintf('Processing folder %s\n',dirList(iD).name)
     % get LTSA file names and tf file name
     %[fn_files, fn_pathname] = uigetfile('*.ltsa','Pick LTSA(s)','MultiSelect','on');
     fn_pathname = fullfile(dirList(iD).folder,dirList(iD).name);
@@ -410,7 +413,7 @@ for iD = 1:length(dirList)
     disp(['Time Elapsed: Spectra from LTSA ', num2str(t),' secs'])
     
     plotDailyAveSpectra_fun(outfile,ptime,mpwrtf,freq,nmave,...
-        navepd,B,sflag,pflag,rm_fifo,dctype)
+        navepd,B,sflag,pflag,rm_fifo,dctype,av,dBaseName,tf_file)
     
 end
 
