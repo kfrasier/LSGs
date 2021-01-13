@@ -21,13 +21,13 @@ clear variables
 global PARAMS
 
 % Load Harp data summary:
-harpDataSummaryCSV = 'C:\Users\HARP\Documents\GitHub\LSGs\HARPdataSummary_20200122.csv';
-harpDataSummary = readtable(harpDataSummaryCSV);
-outDir = 'M:\Shared drives\MBARC_All\LSGs\auto_200kHz';
+% harpDataSummaryCSV = 'C:\Users\HARP\Documents\GitHub\LSGs\HARPdataSummary_20200122.csv';
+% harpDataSummary = readtable(harpDataSummaryCSV);
+outDir = 'F:\Data\LTSAs\GOM\test';
 %TFsFolder = 'I:\Shared drives\MBARC_TF';
 
-TFsFolder = 'C:\Users\HARP\Documents\TFs';
-LTSAdir = 'M:\Shared drives\MBARC_All\LTSAs\SOCAL\N';
+%TFsFolder = 'C:\Users\HARP\Documents\TFs';
+LTSAdir = 'F:\Data\LTSAs\GOM\';
 [dirStem,siteName] = fileparts(LTSAdir);
 [~,projectName] = fileparts(dirStem);
 % initial changable parameters:
@@ -78,32 +78,32 @@ for iD = 1:length(dirList)
     end
     
     % from LTSA name, determine deployment and PreAmp number
-    deplMatch = [];
-    iFile = 1;
-    if iscell(fn_files)
-        fnFileForTF = fn_files{1};
-    else
-        fnFileForTF = fn_files;
-    end
-    while isempty(deplMatch) && iFile<=size(harpDataSummary,1)
-        dBaseName = strrep(harpDataSummary.Data_ID{iFile},'-','');
-        deplMatch = strfind(lower(fnFileForTF),lower(dBaseName));
-        iFile = iFile+1;
-    end
-    if isempty(deplMatch)
-        warning('Error, no matching deployment in HARP database)')
-        continue
-    else
-        deplMatchIdx = iFile-1;
-        tfNum = str2double(harpDataSummary.PreAmp{deplMatchIdx});
-    end
-    
-    % Search TFs folder for the appropriate preamp
-    try
-        [tf_pathname, tf_file] = pick_TF_subdirs(tfNum,TFsFolder);
-    catch
-        disp('no matching TF found, skipping this deployment.')
-    end
+%     deplMatch = [];
+%     iFile = 1;
+%     if iscell(fn_files)
+%         fnFileForTF = fn_files{1};
+%     else
+%         fnFileForTF = fn_files;
+%     end
+%     while isempty(deplMatch) && iFile<=size(harpDataSummary,1)
+%         dBaseName = strrep(harpDataSummary.Data_ID{iFile},'-','');
+%         deplMatch = strfind(lower(fnFileForTF),lower(dBaseName));
+%         iFile = iFile+1;
+%     end
+%     if isempty(deplMatch)
+%         warning('Error, no matching deployment in HARP database)')
+%         continue
+%     else
+%         deplMatchIdx = iFile-1;
+%         tfNum = str2double(harpDataSummary.PreAmp{deplMatchIdx});
+%     end
+%     
+%     % Search TFs folder for the appropriate preamp
+%     try
+%         [tf_pathname, tf_file] = pick_TF_subdirs(tfNum,TFsFolder);
+%     catch
+%         disp('no matching TF found, skipping this deployment.')
+%     end
     % tfList = dir(TFsFolder);
     % tfMatch = [];
     % iTF = 1;
@@ -125,15 +125,15 @@ for iD = 1:length(dirList)
     if ~isdir(outpath)
         mkdir(outpath)
     end
-    outname = [dBaseName '_DailyAves.mat'];
+    outname = [projectName siteName '_DailyAves.mat'];
     outfile = fullfile(outpath,char(outname));
     
     tic
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    disp([ 'Transfer function: ' tf_file.name  ]);
-    tf = fullfile(tf_pathname, tf_file.name);
-    loadTF(tf); % open and read Transfer function file:
-    
+%     disp([ 'Transfer function: ' tf_file.name  ]);
+%     tf = fullfile(tf_pathname, tf_file.name);
+%     loadTF(tf); % open and read Transfer function file:
+%     
     disp('Calculating Averages for:')
     if iscell(fn_files) % then it's a cell full of filenames
         fn = cell(length(fn_files),1);
@@ -169,15 +169,15 @@ for iD = 1:length(dirList)
     end
     
     % correct TF for more than one measurement at a specific frequency
-    [C,ia,ic] = unique(PARAMS.tf.freq);
-    if length(ia) ~= length(ic)
-        disp(['Error: TF file ',tf,' is not monotonically increasing'])
-    end
-    tf_freq = PARAMS.tf.freq(ia);
-    tf_uppc = PARAMS.tf.uppc(ia);
-    % Transfer function correction vector
-    Ptf = interp1(tf_freq,tf_uppc,freq,'linear','extrap');
-    Ptf2 = Ptf'*ones(1,3);  % to add to
+%     [C,ia,ic] = unique(PARAMS.tf.freq);
+%     if length(ia) ~= length(ic)
+%         disp(['Error: TF file ',tf,' is not monotonically increasing'])
+%     end
+%     tf_freq = PARAMS.tf.freq(ia);
+%     tf_uppc = PARAMS.tf.uppc(ia);
+%     % Transfer function correction vector
+%     Ptf = interp1(tf_freq,tf_uppc,freq,'linear','extrap');
+%     Ptf2 = Ptf'*ones(1,3);  % to add to
     
     % fill up header matrix H
     H = zeros(nrftot,3);    % 3 columns: filenumber, datenumber, byteloc in filenumber
@@ -236,8 +236,8 @@ for iD = 1:length(dirList)
     ptime = zeros(nm,1);      % start time of bin average
     nmave = zeros(nm,2);    % number of averages possible and used(ie not filtered out) for each bin
     mpwr = ones(nf,nm);     % mean power over time period
-    mpwrtf = ones(nf,nm);   % mean power with TF applied
-    mpwrTF = ones(nf,nm);   % mean power with FIFO interp & TF applied
+%     mpwrtf = ones(nf,nm);   % mean power with TF applied
+%     mpwrTF = ones(nf,nm);   % mean power with FIFO interp & TF applied
     % mfpwr = ones(nf,nm);
     % spwr = ones(nf,nm);
     % sfpwr = ones(nf,nm);
@@ -351,7 +351,7 @@ for iD = 1:length(dirList)
         % mean - these are smooth (floating point pwr values)
         %     mpwr(1:nf,m) = mean(pwrN,2);
         mpwr(1:nf,m) = mean(pwrM,2);
-        mpwrtf(1:nf,m) = mpwr(1:nf,m) + Ptf';   % add transfer function
+%         mpwrtf(1:nf,m) = mpwr(1:nf,m) + Ptf';   % add transfer function
         
         % running average to remove FIFO spikes
         %     ws = 5; % window size: number of samples
