@@ -1,23 +1,17 @@
 function outFile = avgSpectra_noTF(LTSAdir, outDir, p)
 
-% Calculate average LTSA values given an input folder containing .ltsa
-% files
+% Calculate average LTSA values WITHOUT TRANSFER FUNCTION
+% given an input folder containing .ltsa files
 % Save output somewhere
+% Ugly hack of SMW's code, should pull stuff into functions etc.
+% only works for 200khz data, full band LTSAs
 
-
-% clear variables
 global PARAMS
 outFile = [];
-% Load Harp data summary:
-% harpDataSummaryCSV = 'C:\Users\HARP\Documents\GitHub\LSGs\HARPdataSummary_20200122.csv';
-% harpDataSummary = readtable(harpDataSummaryCSV);
-% outDir = 'M:\Shared drives\MBARC_All\LSGs\auto_200kHz';
-% %TFsFolder = 'I:\Shared drives\MBARC_TF';
-% 
-% TFsFolder = 'C:\Users\HARP\Documents\TFs';
-% LTSAdir = 'M:\Shared drives\MBARC_All\LTSAs\SOCAL\N';
-[~,fullProjectName] = fileparts(LTSAdir);
 
+% Figure out pieces of deployment name with a few possible matching options
+[~,fullProjectName] = fileparts(LTSAdir);
+p.fullName = fullProjectName;
 % determine name parts
 if ~isempty(regexp(fullProjectName,'(\w*)_(\w*)_(\d*)','match'))
     splitTemp = split(fullProjectName,'_');
@@ -29,8 +23,12 @@ elseif ~isempty(regexp(fullProjectName,'(\w*)_(\w*)(\d*)','match'))
     p.projectStr = splitTemp{1};
     p.siteStr = splitTemp{2}(1:end-2);
     p.deplStr = splitTemp{2}(end-1:end);
+elseif ~isempty(regexp(fullProjectName,'(\w*)(\d*)','match'))
+    p.projectStr = fullProjectName(1:end-3);
+    p.deplStr = fullProjectName(end-2:end-1);
+    p.siteStr = fullProjectName(end);
 else
-    error('Folder does not match known name format')
+    error('LTSA folder name does not match a known name format eg. GOM_MC_01, or GofMX_MC01, or SOCAL31M')
 end
     
 % initial changable parameters:
@@ -40,7 +38,6 @@ end
 % p.tres = 1;   % time bin resolution 0 = month, 1 = days, 2 = hours
 % 
 % p.navepd = 5760;
-% p.sflag = 1;
 % p.pflag = 1; 
 % p.rm_fifo = 0;
 % p.dctype = 0;
@@ -93,7 +90,11 @@ for k = 1:nltsas    % loop over files
     PARAMS.ltsa.ftype = 1;
     [PARAMS.ltsa.inpath,infile,ext] = fileparts(fn{k});
     PARAMS.ltsa.infile = [infile,ext];
-    read_ltsahead % better would be to just read nrftot instead of whole header
+    try
+        read_ltsahead % better would be to just read nrftot instead of whole header
+    catch
+        continue
+    end
     nrf = PARAMS.ltsa.nrftot;
     nrftot = nrftot + nrf;
     nf = PARAMS.ltsa.nf;
@@ -148,15 +149,8 @@ nmave = zeros(nm,2);    % number of averages possible and used(ie not filtered o
 mpwr = ones(nf,nm);     % mean power over time period
 minPwr = ones(nf,nm); 
 perc5 = ones(nf,nm); 
-perc75= ones(nf,nm); 
-% mpwrtf = ones(nf,nm);   % mean power with TF applied
-% mpwrTF = ones(nf,nm);   % mean power with FIFO interp & TF applied
-% mfpwr = ones(nf,nm);
-% spwr = ones(nf,nm);
-% sfpwr = ones(nf,nm);
-% mf = ones(nf,nm);
-% sf1 = ones(nf,nm);
-% sf2 = ones(nf,nm);
+perc75= ones(nf,nm);
+percTop10 = ones(nf,nm);
 
 for m = 1:nm    % loop over time average bins
     if p.tres == 0
@@ -171,7 +165,7 @@ for m = 1:nm    % loop over time average bins
     I = find(mnum == dur(m));
     nrfM = length(I);
     pwrM = [];
-    pwrM = zeros(nf,p.NA*nrfM);
+    pwrM = nan(nf,p.NA*nrfM);
     fnum = [];
     fnum = unique(H(I,1));
     nfiles = length(fnum);
@@ -242,90 +236,54 @@ for m = 1:nm    % loop over time average bins
     end  % end for f    
     nmave(m,1) = NBO;
     cnt2 = cnt2 + size(pwrM,2);
-    %     pwrA(1:nf,cnt1:cnt2) = pwrM;
+    
     cnt1 = cnt2 + 1;
-    mpwr(1:nf,m) = mean(pwrM,2);
+    mpwr(1:nf,m) = nanmean(pwrM,2);
     prcPwr = prctile(pwrM',[1,5,75]);
-    minPwr(1:nf,m) = min(pwrM,[],2);
+    minPwr(1:nf,m) = nanmin(pwrM,[],2);
     perc5(1:nf,m) = prcPwr(2,:)';
     perc75(1:nf,m) =  prcPwr(3,:)';
-    1;
-    % mpwrtf(1:nf,m) = mpwr(1:nf,m) + Ptf';   % add transfer function
-    
-    % running average to remove FIFO spikes
-    %     ws = 5; % window size: number of samples
-    %     mfpwr(1:nf,m) = filter(ones(1,ws)/ws,1,mpwr(1:nf,m));
-    %     mf(1:nf,m) = mfpwr(1:nf,m) + Ptf'; % add transfer function
-    
-    % standard deviation
-    %     spwr(1:nf,m) = std(pwrM,1,2);
-    %     sfpwr(1:nf,m) = filter(ones(1,ws)/ws,1,spwr(1:nf,m));
-    %     sf1(1:nf,m) = mfpwr(1:nf,m) + sfpwr(1:nf,m) + Ptf';
-    %     sf2(1:nf,m) = mfpwr(1:nf,m) - sfpwr(1:nf,m) + Ptf';
-    
-    %     % Remove FIFO via inperpolation on spectra
-    %     if rm_fifo
-    %         if fs0 == 2000
-    %             if fsflag
-    %                 fund = 20; % original fs=80kHz
-    %             else
-    %                 fund = 50;
-    %             end
-    %         elseif fs0 == 3200
-    %             fund = 80;
-    %         else
-    %             fprintf('Unknown sample rate %d encountered during rmFIFO\nExiting!\n', ...
-    %                 fs0);
-    %         end
-    %         nomult = 19;
-    %         for mult = 1:nomult %going up to 1000 Hz
-    %             ind2 = [];
-    %             ind2 = find(abs(pwrN(mult*fund+1,:)-pwrN(mult*fund-1,:))>.8);
-    %             if ~isempty(ind2)
-    %                 %diference to add to each increment for interpolation
-    %                 dff(ind2) = (pwrN(mult*fund+3,ind2)-pwrN(mult*fund-1,ind2))/4;
-    %                 pwrN(mult*fund,ind2) = pwrN(mult*fund-1,ind2)+dff(ind2);
-    %                 pwrN(mult*fund+1,ind2) = pwrN(mult*fund-1,ind2)+dff(ind2)*2;
-    %                 pwrN(mult*fund+2,ind2) = pwrN(mult*fund-1,ind2)+dff(ind2)*3;
-    %             end
-    %         end
-    %         % mean - these are smooth
-    %         pwrN = bsxfun(@plus, pwrN, Ptf'); % add in transfer function!
-    %         mpwrTF(1:nf,m) = mean(pwrN,2);
-    %     end
+    percTop10(1:nf,m) = -prctile(-pwrM',10);
+
 end
 
-% if fs0 == 3200  % only save up to 1000 Hz to be comparable to fs0 = 2000
-%     nnf = 1001;
-%     mpwr = mpwr(1:nnf,:);
-%     mpwrTF = mpwrTF(1:nnf,:);
-%     freq = freq(1:nnf);
-% end
 ptime = floor(ptime);
 
+% try to remove bad data points with some heuristics
+outlierIdx0 = mode(minPwr)==0;
+nmave(outlierIdx0,1) = 0;
+if ~isempty(outlierIdx0)
+    1;
+end
+minPwrTemp = minPwr(:,~outlierIdx0);
+outlierIdx = find(mean(minPwr)<(mean(mean(minPwrTemp))-2*(std(mean(minPwrTemp))))|...
+    mean(minPwr)>(mean(mean(minPwrTemp))+3*(std(mean(minPwrTemp)))));
+
+if ~isempty(outlierIdx)
+    1;
+end
+nmave(outlierIdx,1) = 0;
+
+outlierIdx = find(mode(minPwr)==0);
 % filter out partial days (often the first and last day with support ship
 % sounds
 K = find(nmave(:,1) > 0.9*p.navepd & nmave(:,1) <= p.navepd);
 
 lk = length(K);
 pmp = mpwr(:,K);
-YY = year(ptime(K));
-MM = month(ptime(K));
+%YY = year(ptime(K));
+%MM = month(ptime(K));
 pmptime = ptime(K);
 pmperc75 = perc75(:,K);
 pmperc5 = perc5(:,K);
 pmpMinPwr = minPwr(:,K);
+pmpercTop10 = percTop10(:,K);
 
 % save results
-save(outFile,'lk','freq','nmave','p','pmpMinPwr','pmperc75','pmperc5',...
+save(outFile,'lk','freq','nmave','p','pmpMinPwr','pmperc75','pmperc5','pmpercTop10',...
     'pmptime','pmp')
 
 t = toc;
 disp(' ')
 disp(['Time Elapsed: Spectra from LTSA ', num2str(t),' secs'])
-
-% plotDailyAveSpectra_fun(outfile,ptime,mpwrtf,freq,nmave,...
-%     navepd,B,sflag,pflag,rm_fifo,dctype,av,dBaseName,tf_file)
-
-
 

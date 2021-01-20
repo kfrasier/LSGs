@@ -1,4 +1,4 @@
-function plotDailyLSG(inDir,titleStr,saveName,typeFlag,cAdjust)
+function plotDailyLSG(inDir,titleStr,saveName,typeFlag,favDepl,tfType,TFbaseDir)
 %
 % Single site long spectrogram use the same T and F vector.
 % the power matrix for each site is pre-allocated, then filled for days
@@ -6,15 +6,20 @@ function plotDailyLSG(inDir,titleStr,saveName,typeFlag,cAdjust)
 %
 % 170707 smw
 %
-ns = 1; % number of sites
+global PARAMS
+%ns = 1; % number of sites
 poff = datenum([2000 0 0 0 0 0]);   % needed to show year as 2010 not 10
 spflag = 1; % save plot flag yes=1, no=0
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % get user input
 fs = 200000;
-nch = 1;
+%nch = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+codePath = mfilename('fullpath');
+[codeDir,~] = fileparts(codePath);
+harpDataSummaryCSV = fullfile(codeDir,'HARPdataSummary_20200122.csv');
+harpDataSummary = readtable(harpDataSummaryCSV);
 
 % set parameters based on sample rate
 if fs == 2000 || fs == 3200
@@ -25,7 +30,7 @@ if fs == 2000 || fs == 3200
     % color min and max in spectral power
     cmn = 39;
     cmx = 110;
-    cmin = 1; cmax = 110;   %[dB]
+    %cmin = 1; cmax = 110;   %[dB]
     fstr = 'Hz';
     ptype = 1;  % high freq linear =0, low freq log =1
 elseif fs == 10000
@@ -57,8 +62,8 @@ elseif fs == 200000
     la = 0;        % plot min freq
     lb = 100;       % plot max freq
     % color min and max in spectral power
-    cmn = 30+cAdjust;
-    cmx = 60+cAdjust;
+    cmn = 30;
+    cmx = 60;
     
     fstr = 'kHz';
     ptype = 0;  % high freq linear =0, low freq log =1
@@ -70,7 +75,7 @@ elseif fs == 320000
     % color min and max in spectral power
     cmn = 30;
     cmx = 60;
-    cmin = 1; cmax = 70;   %[dB]
+    %cmin = 1; cmax = 70;   %[dB]
     fstr = 'kHz';
     ptype = 0;  % high freq linear =0, low freq log =1
 else
@@ -134,41 +139,85 @@ FM = zeros(npF,nD);  % pre-allocate power matrix
 %
 sn{nS}=[];
 tf_file = [];
-figure(322);clf
 meanPmp = [];
+noiseFloor = [];
+signalEstimate = [];
+tfSet = [];
 for k = 1:nS
     load(fn{k})   % 'T','P','freq','MP','sname'
+    
+    % get tf
+    if strcmp(tfType,'MBARC_TFs')
+        [tfNum,~] = findTF(p.fullName, harpDataSummary);
+        if ~isempty(tfNum)
+            [TFPath, TFName] = pick_TF_subdirs(tfNum,TFbaseDir);
+        else
+            TFName = [];
+        end
+    elseif strcmp(tfType,'Wind')
+        error('Wind tf not implemented yet')  
+    else
+        error('Unknown TF option, please specify "MBARC_TFs" or "Wind"')  
+    end
+    % correct TF for more than one measurement at a specific frequency
+    if isempty(TFName)
+        warning('No TF file found for %d', tfNum)
+        tfNum = []; % reset to empty because some files may not have this variable
+        Ptf = zeros(size(pmp(:,1)));
+        tf{k} = [];
+
+    else
+        
+        loadTF(fullfile(TFName(1).folder,TFName(1).name))
+        [C,ia,ic] = unique(PARAMS.tf.freq);
+    
+        tf{k} = tfNum;
+        if length(ia) ~= length(ic)
+            disp(['Error: TF file ',tf,' is not monotonically increasing'])
+        end
+        tf_freq = PARAMS.tf.freq(ia);
+        tf_uppc = PARAMS.tf.uppc(ia);
+        % Transfer function correction vector
+        Ptf = interp1(tf_freq,tf_uppc,freq,'linear','extrap')';
+    end
+    tfSet(:,k) = Ptf;
     T = pmptime;
     if typeFlag == 1 % plot average
-        meanPmp(k,:) = smooth(mean(pmp,2),10);
-        P = pmp;
+        meanPmp(k,:) = smooth(mean(pmp+Ptf,2),10);
+        P = pmp+Ptf;
     elseif typeFlag == 2 % plot noise floor (5th percentile)
-        meanPmp(k,:) = mean(pmpMinPwr,2);
-        P = pmpMinPwr;
+        meanPmp(k,:) = smooth(mean(pmpMinPwr+Ptf,2));
+        P = pmpMinPwr+Ptf;
     elseif typeFlag == 3 % plot response (75th percentile)
-        meanPmp(k,:) = smooth(mean(pmperc75,2),10);
-        P = pmperc75;
+        meanPmp(k,:) = smooth(mean(pmpercTop10+Ptf,2),10);
+        P = pmpercTop10+Ptf;
     end
-    
+    pmpMinPwrSmooth = [];
+    pmpercTop10Smooth = [];
+    for Ir = 1:size(pmpMinPwr,2)
+        pmpMinPwrSmooth(:,Ir) = smooth(pmpMinPwr(:,Ir)+Ptf,20);
+        pmpercTop10Smooth(:,Ir) = smooth(pmpercTop10(:,Ir)+Ptf,20);
+    end
+    noiseFloor(k,:)= smooth(prctile(pmpMinPwrSmooth,5,2),20);
+    signalEstimate(k,:) = smooth(mean(pmpercTop10Smooth,2),20);
     sname = [p.siteStr,'_',p.deplStr];
+    %sname = [p.siteStr(2),p.deplStr];
+    
     sn{k} = sname;
-    tf{k} = tf_file;
-    tf_file = []; % reset to empty because some files may not have this variable
     deplStart{k} = T(1);
-    Ti = T - dD;
-    FM(:,Ti) = P(1:npF,:);
-          
-        
-    figure(322);plot(freq,meanPmp(k,:));hold on
+    Ti{k} = T - dD;
+    FM(:,Ti{k}) = P(1:npF,:);
+    
+    
 end
-
+legend(gca,sn,'location','eastoutside')
+grid on
 % make xTick for months
 d=datevec(Tp);
 %takes every month just once
 [a,idxm]=unique(d(:,1:2),'rows');
 %takes every year just once
 [a,idxy]=unique(d(:,1),'rows');
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % make figure
 %%
@@ -201,7 +250,6 @@ set(gca,'XtickLabel',Tp(idxm))
 % set(gca,'xtick',Tp(idxy))
 %set(gca,'xtick',Tp(idxm))
 datetick('x','mmm-yy','keeplimits','keepticks')
-
 
 % datetick
 
@@ -253,8 +301,8 @@ hold on
 for iDep = 1:length(deplStart)
     text(deplStart{iDep}+poff,lb*1.06+1500*ptype,0,strrep(sn{iDep},'_','\_'))
     if ~isempty(tf{iDep})
-        tfShort = strrep(tf{iDep},'_','\_');
-        text(deplStart{iDep}+poff,lb*1.03+500*ptype,0,tfShort(1:3))
+        tfShort = num2str(tf{iDep});
+        text(deplStart{iDep}+poff,lb*1.03+500*ptype,0,tfShort)
         line([deplStart{iDep}+poff,deplStart{iDep}+poff],...
             [1e-2,lb], [z_max,z_max],'color','k','LineWidth',2,'linestyle','--')
     end
@@ -308,3 +356,115 @@ if spflag
     saveas(gca,fullfile(opath,ofile3))
 end
 
+
+%%
+%favDepl = 10;
+if 1
+    hF=figure(751);clf
+    FM2 = zeros(npF,nD);  % pre-allocate power matrix
+    corrFac = signalEstimate-signalEstimate(favDepl,:);
+    %corrFac = sMinusN-sMinusN(favDepl,:);
+
+    
+    for iK = 1:length(Ti)
+        FM2(:,Ti{iK}) = FM(:,Ti{iK})-corrFac(iK,:)';
+        %figure(347);clf
+       
+        %plot(freq/1000,[noiseFloor(iK,:);signalEstimate(iK,:)])
+        1;
+    end
+    correctedTFs = tfSet-corrFac';
+    figure(348);clf
+    plot(freq/1000,-corrFac);grid on;legend(gca,strrep(sn,'_','\_'),'location','eastoutside')
+    hold on
+    plot(freq/1000,Ptf,'k')
+    ylim([-20,20]);xlabel('Frequency (kHz)')
+    title(sprintf('Estimated correction based on deployment %s',strrep(sn{favDepl},'_','\_')))
+
+    
+    figure(349);clf
+    plot(freq/1000,correctedTFs);grid on;legend(gca,strrep(sn,'_','\_'),'location','eastoutside')
+    hold on
+    plot(freq/1000,Ptf,'k')
+    ylim([40,100]);xlabel('Frequency (kHz)')
+    title(sprintf('Estimated TFs based on deployment %s',strrep(sn{favDepl},'_','\_')))
+    figure(hF)
+    set(hF,'Units','normalized','Position',[.15,.2,.75,.7])
+    pp = [0.25 0.25 10.5 8.0];
+    set(hF,'PaperPosition',pp)
+    FS = 24;
+    FS2 = FS;
+    %%%%%%%%%%%%%%%%%%%%
+    % plot spectrogram
+    h = surf(Tp,Fp,FM2,'Linestyle','none');
+    sgAx = get(h,'Parent');
+    view(sgAx,0,90)
+    if ptype
+        set(sgAx,'yscale','log')
+    else
+        set(sgAx,'yscale','linear')
+    end
+    set(sgAx,'TickDir','out')
+    axis([ta tb la lb])
+    set(gca,'FontSize',20)
+    set(gca,'XtickLabel',Tp(idxm))
+    datetick('x','mmm-yy','keeplimits','keepticks')
+    ax = get(gca);
+    % minor ticks
+    ax.XAxis.MinorTick = 'on';
+    ax.XAxis.MinorTickValues = Tp(idxm);
+    ap = get(gca,'Position');
+    set(gca,'Position',[ap(1) ap(2)+0.1 ap(3) ap(4)*.80])
+    ylabel(['Frequency [',fstr,']'],'FontSize',FS)
+    
+    % plot frame/box
+    txtz = 200;
+    % dtl = datenum([0 0 1 0 0 0]);
+    dtl = datenum([0 0 0 1 0 0]);
+    dfa = -1e-10; dfb = 1e-10;
+    lx = [ta+dtl ta+dtl tb-2*dtl tb-2*dtl ta+dtl];
+    ly = [la+dfa lb-dfb lb-dfb la+dfa la+dfa];
+    lz = txtz.*ones(1,5);
+    hold on
+    plot3(lx,ly,lz,'-k','LineWidth',2)
+    hold off
+    caxis([cmn cmx]) % set color limits
+    colormap(jet)
+    z_max = max(max(get(h,'Zdata')));
+    hold on
+    % add deployment name and tf name
+    for iDep = 1:length(deplStart)
+        text(deplStart{iDep}+poff,lb*1.06+1500*ptype,0,strrep(sn{iDep},'_','\_'))
+        if ~isempty(tf{iDep})
+            tfShort = num2str(tf{iDep});
+            text(deplStart{iDep}+poff,lb*1.03+500*ptype,0,tfShort)
+            line([deplStart{iDep}+poff,deplStart{iDep}+poff],...
+                [1e-2,lb], [z_max,z_max],'color','k','LineWidth',2,'linestyle','--')
+        end
+    end
+    hold off
+    % colorbar
+    cb = colorbar('Location','SouthOutside','FontSize',FS);%'Position',[0.12 0.125 0.8 0.0125]);
+    xlabel(cb,'Spectrum Level [dB re 1\muPa^2/Hz]')
+    %    'HorizontalAlignment','center','Units','normalized','FontSize',FS)
+    set(cb,'XLim',[cmn+1 cmx])
+    
+    % add plus sign to last label on colorbar
+    xtl = get(cb,'XTickLabel');
+    xtl = [char(xtl) blanks(length(xtl))'];
+    xtl(end,end) = '+';
+    set(cb,'XTickLabel',xtl)
+    
+    % use path as title - could be better...
+    warning('off')
+    hT = title(sprintf('%s: "Corrected" LSG based on %s',titleStr,strrep(sn{favDepl},'_','\_')),'FontSize',FS2);
+    set(hT,'Position',get(hT,'Position')+[0,lb*.06+3000*ptype,0])
+    
+    opath = inDir;
+    ofile = ['SingleLSG_Corrected',saveName,'.jpg'];
+    print('-f750','-djpeg','-r600',fullfile(opath,ofile))
+    ofile2 = ['SingleLSG_Corrected',saveName,'.tif'];
+    print('-f750','-dtiff','-r600',fullfile(opath,ofile2))
+    ofile3 = ['SingleLSG_Corrected',saveName,'.fig'];
+    saveas(gca,fullfile(opath,ofile3))
+end
