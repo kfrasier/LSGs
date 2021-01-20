@@ -1,5 +1,5 @@
 function plotDailyAveSpectra_fun(infile,ptime,mpwrtf,freq,nmave,...
-        navepd,B,sflag,pflag,rm_fifo,dctype,av,dname,tf_file)
+        navepd,B,sflag,pflag,rm_fifo,dctype,av,tf_file)
 %
 % based on plotDailyAveSpectra_180119.m
 %
@@ -174,9 +174,9 @@ legend(lstr,'FontSize',FS)
 xlabel('Frequency [Hz]','FontSize',FS2)
 ylabel('Spectrum Level [dB re 1\muPa^2/Hz]','FontSize',FS2)
 if 0
-    title(strrep(dname,'_','\_'),'FontSize',FS2)
+    title(strrep(name,'_','\_'),'FontSize',FS2)
 else
-    ht = text(100,0.95*(av(4)-av(3))+av(3),dname,'FontSize',FS2,'interpreter','none');
+    ht = text(100,0.95*(av(4)-av(3))+av(3),name,'FontSize',FS2,'interpreter','none');
     ht.HorizontalAlignment = 'center';
     ht.EdgeColor = 'k';
 end
@@ -196,7 +196,7 @@ if sflag
     ofile = fullfile(ipath,[inname,'_MonthlySpectra.mat']);
     save(ofile,'ma','freq','yr','mn','lstr','me')
     ofile2 = fullfile(ipath,[inname,'B.mat']);
-    save(ofile2,'pmptime','pmp','freq','dname','navepd','tf_file')
+    save(ofile2,'pmptime','pmp','freq','name','navepd','tf_file')
     freq = frs;
 end
 

@@ -21,11 +21,11 @@ clear variables
 global PARAMS
 
 % Load Harp data summary:
-harpDataSummaryCSV = 'C:\Users\Hosei\Desktop\HARPdataSummary_20200122.csv';
+harpDataSummaryCSV = 'C:\Users\albas\Documents\GitHub\LSGs\HARPdataSummary_20210106.csv';
 harpDataSummary = readtable(harpDataSummaryCSV);
-outDir = 'I:\Shared drives\MBARC_All\LSGs\auto_200kHz';
-TFsFolder = 'I:\Shared drives\MBARC_TF';
-LTSAdir = 'I:\Shared drives\MBARC_All\LTSAs\SOCAL\N';
+outDir = 'G:\Shared drives\SOCAL_Sonar_Impact\LSGs';
+TFsFolder = 'G:\Shared drives\SOCAL_Sonar_Impact\mixed_TFs';
+LTSAdir = 'G:\Shared drives\MBARC_All\LTSAs\SOCAL\N';
 [dirStem,siteName] = fileparts(LTSAdir);
 [~,projectName] = fileparts(dirStem);
 % initial changable parameters:
@@ -92,7 +92,8 @@ for iD = 1:length(dirList)
         continue
     else
         deplMatchIdx = iFile-1;
-        tfNum = str2double(harpDataSummary.PreAmp{deplMatchIdx});
+%         tfNum = str2double(harpDataSummary.PreAmp{deplMatchIdx});
+        tfNum = harpDataSummary.PreAmp(deplMatchIdx);
     end
     
     % Search TFs folder for the appropriate preamp
@@ -127,6 +128,17 @@ for iD = 1:length(dirList)
     
     tic
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    if size(tf_file,1) > 1
+       % more than one tf for this tfNum, select correct one
+       disp('Multiple transfer functions for the corresponding preAmp number.Select according to deployment date:')
+       sprintf('%s deployment date: %s\n',dBaseName,harpDataSummary.Deploy_Date(iFile))
+       tf_name = {tf_file.name}';
+       tf_num = (1:size(tf_file,1))';
+       disp(table(tf_num,tf_name))
+       x = str2double(cell2mat(inputdlg(sprintf('Specify which transfer function between 1 and %d corresponds to %s:',size(tf_file,1),dBaseName))));
+       tf_file = tf_file(x);
+    end
+    
     disp([ 'Transfer function: ' tf_file.name  ]);
     tf = fullfile(tf_pathname, tf_file.name);
     loadTF(tf); % open and read Transfer function file:
@@ -404,7 +416,7 @@ for iD = 1:length(dirList)
     disp(['Time Elapsed: Spectra from LTSA ', num2str(t),' secs'])
     
     plotDailyAveSpectra_fun(outfile,ptime,mpwrtf,freq,nmave,...
-        navepd,B,sflag,pflag,rm_fifo,dctype)
+        navepd,B,sflag,pflag,rm_fifo,dctype,av,tf_file)
     
 end
 

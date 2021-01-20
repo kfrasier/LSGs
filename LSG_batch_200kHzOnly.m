@@ -21,13 +21,13 @@ clear variables
 global PARAMS
 
 % Load Harp data summary:
-harpDataSummaryCSV = 'C:\Users\HARP\Documents\GitHub\LSGs\HARPdataSummary_20200122.csv';
+harpDataSummaryCSV = 'C:\Users\albas\Documents\GitHub\LSGs\HARPdataSummary_20210106.csv';
 harpDataSummary = readtable(harpDataSummaryCSV);
-outDir = 'M:\Shared drives\MBARC_All\LSGs\auto_200kHz';
-%TFsFolder = 'I:\Shared drives\MBARC_TF';
+outDir = 'G:\Shared drives\MBARC_All\LSGs\auto_200kHz (1)';
+TFsFolder = 'G:\Shared drives\MBARC_TF';
 
-TFsFolder = 'C:\Users\HARP\Documents\TFs';
-LTSAdir = 'M:\Shared drives\MBARC_All\LTSAs\SOCAL\N';
+%TFsFolder = 'C:\Users\HARP\Documents\TFs';
+LTSAdir = 'G:\Shared drives\MBARC_All\LTSAs\SOCAL\M';
 [dirStem,siteName] = fileparts(LTSAdir);
 [~,projectName] = fileparts(dirStem);
 % initial changable parameters:
@@ -95,7 +95,7 @@ for iD = 1:length(dirList)
         continue
     else
         deplMatchIdx = iFile-1;
-        tfNum = str2double(harpDataSummary.PreAmp{deplMatchIdx});
+        tfNum = str2double(harpDataSummary.PreAmp(deplMatchIdx));
     end
     
     % Search TFs folder for the appropriate preamp

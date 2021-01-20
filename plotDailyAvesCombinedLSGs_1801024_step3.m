@@ -8,6 +8,7 @@
 %
 clear variables
 
+site = 'SOCAL';
 ns = 1; % number of sites
 poff = datenum([2000 0 0 0 0 0]);   % needed to show year as 2010 not 10
 spflag = 1; % save plot flag yes=1, no=0
@@ -153,7 +154,8 @@ for k = 1:nS
     load(fn{k})   % 'T','P','freq','MP','sname'
     T = pmptime;
     P = pmp;
-    sname = dname(7:end);
+    splitname = strsplit(fn_files{k},{site,'_DailyAvesB'});
+    sname = splitname{2};%dname(7:end);
     sn{k} = sname;
     tf{k} = tf_file;
     tf_file = []; % reset to empty because some files may not have this variable
@@ -175,12 +177,11 @@ d=datevec(Tp);
 % make figure
 %%
 hF=figure(750);clf
-
 set(hF,'Units','normalized','Position',[.15,.2,.75,.7])
 % pp = [0.25 0.25 8.0 10.5];
 pp = [0.25 0.25 10.5 8.0];
 set(hF,'PaperPosition',pp)
-FS = 24;
+FS = 20;
 FS2 = FS;
 %%%%%%%%%%%%%%%%%%%%
 % plot spectrogram
@@ -255,7 +256,7 @@ hold on
 for iDep = 1:length(deplStart)
     text(deplStart{iDep}+poff,lb*1.06+1500*ptype,0,strrep(sn{iDep},'_','\_'))
     if ~isempty(tf{iDep})
-        tfShort = strrep(tf{iDep},'_','\_');
+        tfShort = strrep(tf{iDep}.name,'_','\_');
         text(deplStart{iDep}+poff,lb*1.03+500*ptype,0,tfShort(1:3))
         line([deplStart{iDep}+poff,deplStart{iDep}+poff],...
             [1e-2,lb], [z_max,z_max],'color','k','LineWidth',2,'linestyle','--')

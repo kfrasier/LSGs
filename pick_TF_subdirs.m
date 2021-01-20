@@ -9,7 +9,7 @@ expectedDirList = {'100-399';'400-499';'500-599';'600-699';'700-799';
 tfRanges = [100,399;400,499;500,599;600,699;700,799;
                 800,899;900,999];
                     
-dirIdx = find(tfNum>tfRanges(:,1)&tfNum<tfRanges(:,2));
+dirIdx = find(tfNum>=tfRanges(:,1)&tfNum<=tfRanges(:,2));
 
 TFPath = fullfile(TFbaseDir,expectedDirList{dirIdx},num2str(tfNum));
 TFName =  dir(fullfile(TFPath,'*.tf'));
