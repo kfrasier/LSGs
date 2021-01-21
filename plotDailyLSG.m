@@ -162,9 +162,9 @@ for k = 1:nS
     % correct TF for more than one measurement at a specific frequency
     if isempty(TFName)
         warning('No TF file found for %d', tfNum)
-        tfNum = []; % reset to empty because some files may not have this variable
+        %tfNum = []; % reset to empty because some files may not have this variable
         Ptf = zeros(size(pmp(:,1)));
-        tf{k} = [];
+        tf{k} = tfNum;
 
     else
         

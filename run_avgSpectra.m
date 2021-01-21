@@ -34,7 +34,7 @@ for iDir = 1:nDirs % parfor works here, unless it hits something unusual. for is
     fprintf('Done with folder %s\n',LTSAdir)
 end
 
-favDepl = 2;%DC % favorite deployment, just counts in order of deployment start time from the 
+favDepl = [2,3,4,5,6];%DC % favorite deployment, just counts in order of deployment start time from the 
 % set of deployments in outDir. Doesn't do any matching of deployment numbers or anything
 
 TFbaseDir = 'C:\Users\HARP\Documents\TFs';% ideally points to MBARC_TFs on google drive if you have filestream set up
@@ -63,4 +63,31 @@ saveName = 'top10thPerc';
 plotDailyLSG(outDir,plotName,saveName,LSGType,favDepl,tfType,TFbaseDir)
 
 
+%% Example of saving transfer function file *.tf
+load('F:\LSGs\GOM\MC\dailyAves\SingleLSG_Corrected_meanPower.mat')
+myDepl = 9; % pick the the deployment
+thisCorrection = corrFac(myDepl,:); 
+thisCorrection(600:end) = 0;% set correction to zero above the point where you stop beleiving it;
+thisNewTF = smooth(tfSet(:,myDepl)-thisCorrection',50);% apply correction to original TF, and smooth a little.
+myTF = [freq',thisNewTF];
 
+% make a folder to store it if needed
+tfOutDir = fullfile(outDir, 'tf files\');
+if ~isdir(tfOutDir)
+    mkdir(tfOutDir)
+end
+% write TF file
+myTFName = fullfile(tfOutDir,sprintf('%0.0f_%s_adjusted_invSensit.tf',tf{myDepl},sn{myDepl}));
+fod = fopen(myTFName,'w');
+fprintf(fod,'%6.0f   %4.2f\n',myTF');
+fclose(fod);
+% Test that the TF file works
+loadTF(myTFName)
+global PARAMS
+figure(11);clf
+plot(PARAMS.tf.freq,PARAMS.tf.uppc)
+hold on
+plot(freq,tfSet(:,myDepl))
+legend({'adjusted TF','original TF'})
+grid on
+title(PARAMS.tf.filename)
