@@ -132,7 +132,7 @@ dD = ta - poff;
 
 nD = tb - ta + 1;
 
-FM = zeros(npF,nD);  % pre-allocate power matrix
+powerMat = zeros(npF,nD);  % pre-allocate power matrix
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % put site values in one matrix
@@ -140,7 +140,7 @@ FM = zeros(npF,nD);  % pre-allocate power matrix
 sn{nS}=[];
 tf_file = [];
 meanPmp = [];
-noiseFloor = [];
+noiseFloorEst = [];
 signalEstimate = [];
 tfSet = [];
 for k = 1:nS
@@ -198,7 +198,7 @@ for k = 1:nS
         pmpMinPwrSmooth(:,Ir) = smooth(pmpMinPwr(:,Ir)+Ptf,20);
         pmpercTop10Smooth(:,Ir) = smooth(pmpercTop10(:,Ir)+Ptf,20);
     end
-    noiseFloor(k,:)= smooth(prctile(pmpMinPwrSmooth,5,2),20);
+    noiseFloorEst(k,:)= smooth(prctile(pmpMinPwrSmooth,5,2),20);
     signalEstimate(k,:) = smooth(mean(pmpercTop10Smooth,2),20);
     sname = [p.siteStr,'_',p.deplStr];
     %sname = [p.siteStr(2),p.deplStr];
@@ -206,7 +206,7 @@ for k = 1:nS
     sn{k} = sname;
     deplStart{k} = T(1);
     Ti{k} = T - dD;
-    FM(:,Ti{k}) = P(1:npF,:);
+    powerMat(:,Ti{k}) = P(1:npF,:);
     
     
 end
@@ -232,7 +232,7 @@ FS2 = FS;
 %%%%%%%%%%%%%%%%%%%%
 % plot spectrogram
 %
-h = surf(Tp,Fp,FM,'Linestyle','none');
+h = surf(Tp,Fp,powerMat,'Linestyle','none');
 sgAx = get(h,'Parent');
 view(sgAx,0,90)
 if ptype
@@ -361,13 +361,13 @@ end
 %favDepl = 10;
 if 1
     hF=figure(751);clf
-    FM2 = zeros(npF,nD);  % pre-allocate power matrix
-    corrFac = signalEstimate-signalEstimate(favDepl,:);
+    powerMatCorr = zeros(npF,nD);  % pre-allocate power matrix
+    corrFac = signalEstimate-mean(signalEstimate(favDepl,:),1);
     %corrFac = sMinusN-sMinusN(favDepl,:);
 
     
     for iK = 1:length(Ti)
-        FM2(:,Ti{iK}) = FM(:,Ti{iK})-corrFac(iK,:)';
+        powerMatCorr(:,Ti{iK}) = powerMat(:,Ti{iK})-corrFac(iK,:)';
         %figure(347);clf
        
         %plot(freq/1000,[noiseFloor(iK,:);signalEstimate(iK,:)])
@@ -379,7 +379,7 @@ if 1
     hold on
     plot(freq/1000,Ptf,'k')
     ylim([-20,20]);xlabel('Frequency (kHz)')
-    title(sprintf('Estimated correction based on deployment %s',strrep(sn{favDepl},'_','\_')))
+    title(sprintf('Estimated correction based on deployment %s',strrep([sn{favDepl}],'_','\_')))
 
     
     figure(349);clf
@@ -387,7 +387,7 @@ if 1
     hold on
     plot(freq/1000,Ptf,'k')
     ylim([40,100]);xlabel('Frequency (kHz)')
-    title(sprintf('Estimated TFs based on deployment %s',strrep(sn{favDepl},'_','\_')))
+    title(sprintf('Estimated TFs based on deployment %s',strrep([sn{favDepl}],'_','\_')))
     figure(hF)
     set(hF,'Units','normalized','Position',[.15,.2,.75,.7])
     pp = [0.25 0.25 10.5 8.0];
@@ -396,7 +396,7 @@ if 1
     FS2 = FS;
     %%%%%%%%%%%%%%%%%%%%
     % plot spectrogram
-    h = surf(Tp,Fp,FM2,'Linestyle','none');
+    h = surf(Tp,Fp,powerMatCorr,'Linestyle','none');
     sgAx = get(h,'Parent');
     view(sgAx,0,90)
     if ptype
@@ -457,14 +457,17 @@ if 1
     
     % use path as title - could be better...
     warning('off')
-    hT = title(sprintf('%s: "Corrected" LSG based on %s',titleStr,strrep(sn{favDepl},'_','\_')),'FontSize',FS2);
+    hT = title(sprintf('%s: "Corrected" LSG based on %s',titleStr,strrep([sn{favDepl}],'_','\_')),'FontSize',FS2);
     set(hT,'Position',get(hT,'Position')+[0,lb*.06+3000*ptype,0])
     
     opath = inDir;
-    ofile = ['SingleLSG_Corrected',saveName,'.jpg'];
+    ofile = ['SingleLSG_Corrected_',saveName,'.jpg'];
     print('-f750','-djpeg','-r600',fullfile(opath,ofile))
-    ofile2 = ['SingleLSG_Corrected',saveName,'.tif'];
+    ofile2 = ['SingleLSG_Corrected_',saveName,'.tif'];
     print('-f750','-dtiff','-r600',fullfile(opath,ofile2))
-    ofile3 = ['SingleLSG_Corrected',saveName,'.fig'];
+    ofile3 = ['SingleLSG_Corrected_',saveName,'.fig'];
     saveas(gca,fullfile(opath,ofile3))
+    ofile4 = ['SingleLSG_Corrected_',saveName,'.mat'];
+    save(fullfile(opath,ofile4),'corrFac','favDepl','correctedTFs','freq','powerMat',...
+        'sn','powerMatCorr','noiseFloorEst','signalEstimate','Tp','Fp','tf','-v7.3')
 end
