@@ -469,5 +469,5 @@ if 1
     saveas(gca,fullfile(opath,ofile3))
     ofile4 = ['SingleLSG_Corrected_',saveName,'.mat'];
     save(fullfile(opath,ofile4),'corrFac','favDepl','correctedTFs','freq','powerMat',...
-        'sn','powerMatCorr','noiseFloorEst','signalEstimate','Tp','Fp','tf','-v7.3')
+        'sn','powerMatCorr','noiseFloorEst','signalEstimate','tfSet','Tp','Fp','tf','-v7.3')
 end
