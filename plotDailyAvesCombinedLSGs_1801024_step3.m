@@ -8,7 +8,7 @@
 %
 clear variables
 
-site = 'SOCAL';
+site = 'BM';
 ns = 1; % number of sites
 poff = datenum([2000 0 0 0 0 0]);   % needed to show year as 2010 not 10
 spflag = 1; % save plot flag yes=1, no=0

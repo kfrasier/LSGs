@@ -23,11 +23,12 @@ global PARAMS
 % Load Harp data summary:
 harpDataSummaryCSV = 'C:\Users\albas\Documents\GitHub\LSGs\HARPdataSummary_20210106.csv';
 harpDataSummary = readtable(harpDataSummaryCSV);
-outDir = 'G:\Shared drives\SOCAL_Sonar_Impact\LSGs';
-TFsFolder = 'G:\Shared drives\SOCAL_Sonar_Impact\mixed_TFs';
-LTSAdir = 'G:\Shared drives\MBARC_All\LTSAs\SOCAL\N';
+outDir = 'G:\Shared drives\MBARC_All\LSGs\auto_200kHz';
+TFsFolder = 'G:\Shared drives\MBARC_TF';
+LTSAdir = 'G:\Shared drives\MBARC_All\LTSAs\Bermuda';
 [dirStem,siteName] = fileparts(LTSAdir);
-[~,projectName] = fileparts(dirStem);
+%[~,projectName] = fileparts(dirStem);
+projectName = 'BM';
 % initial changable parameters:
 % rm_fifo = 0;    % remove FIFO via interpolation on spectra. 0=no, 1=yes
 % fsflag = 1;     % sample rate flag for FIFO removal 1=80kHz, 0=all other
@@ -58,7 +59,7 @@ av = [100 100000 10 120];	% plot axis vector
 % end
 % % sthr = 100; % set sthr high for no strum filter
 dirList = dir(fullfile(LTSAdir,[projectName,'*']));
-for iD = 1:length(dirList)
+for iD = 3:length(dirList)
     if ~dirList(iD).isdir
         % if not a directory, continue to next folder.
         continue
