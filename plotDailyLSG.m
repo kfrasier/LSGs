@@ -1,4 +1,4 @@
-function plotDailyLSG(inDir,titleStr,saveName,typeFlag,favDepl,tfType,TFbaseDir)
+function plotDailyLSG(inDir,outDir,titleStr,saveName,typeFlag,favDepl,tfType,TFbaseDir)
 %
 % Single site long spectrogram use the same T and F vector.
 % the power matrix for each site is pre-allocated, then filled for days
@@ -155,9 +155,9 @@ for k = 1:nS
             TFName = [];
         end
     elseif strcmp(tfType,'Wind')
-        error('Wind tf not implemented yet')  
+        error('Wind tf not implemented yet')
     else
-        error('Unknown TF option, please specify "MBARC_TFs" or "Wind"')  
+        error('Unknown TF option, please specify "MBARC_TFs" or "Wind"')
     end
     % correct TF for more than one measurement at a specific frequency
     if isempty(TFName)
@@ -165,12 +165,26 @@ for k = 1:nS
         %tfNum = []; % reset to empty because some files may not have this variable
         Ptf = zeros(size(pmp(:,1)));
         tf{k} = tfNum;
-
+        thisTF = [];
+    elseif size(TFName,1)>1
+        disp('found multiple matching TFs based on number')
+        disp('     attempting to match based on site and deployment name')
+        dplMatchIdxVec = contains(vertcat(TFName(:).name), char([p.siteStr,p.deplStr]));
+        dplMatchIdx = find(dplMatchIdxVec==1);
+        if isempty(dplMatchIdx)
+            disp('      No match based on naming, going with first option')
+            thisTF = fullfile(TFName(1).folder,TFName(1).name);
+            
+        else
+            thisTF = fullfile(TFName(dplMatchIdx(1)).folder,TFName(dplMatchIdx(1)).name);
+        end
     else
-        
-        loadTF(fullfile(TFName(1).folder,TFName(1).name))
+        thisTF = fullfile(TFName(1).folder,TFName(1).name);
+    end
+    if ~isempty(thisTF)
+        loadTF(thisTF)
         [C,ia,ic] = unique(PARAMS.tf.freq);
-    
+        
         tf{k} = tfNum;
         if length(ia) ~= length(ic)
             disp(['Error: TF file ',tf,' is not monotonically increasing'])
@@ -347,7 +361,7 @@ set(hT,'Position',get(hT,'Position')+[0,lb*.06+3000*ptype,0])
 %%
 % Save plot to file
 if spflag
-    opath = inDir;
+    opath = outDir;
     ofile = ['SingleLSG_',saveName,'.jpg'];
     print('-f750','-djpeg','-r600',fullfile(opath,ofile))
     ofile2 = ['SingleLSG_',saveName,'.tif'];
@@ -359,17 +373,17 @@ end
 
 %%
 %favDepl = 10;
-if 1
+if ~isempty(favDepl)
     hF=figure(751);clf
     powerMatCorr = zeros(npF,nD);  % pre-allocate power matrix
     corrFac = signalEstimate-mean(signalEstimate(favDepl,:),1);
     %corrFac = sMinusN-sMinusN(favDepl,:);
-
+    
     
     for iK = 1:length(Ti)
         powerMatCorr(:,Ti{iK}) = powerMat(:,Ti{iK})-corrFac(iK,:)';
         %figure(347);clf
-       
+        
         %plot(freq/1000,[noiseFloor(iK,:);signalEstimate(iK,:)])
         1;
     end
@@ -380,7 +394,7 @@ if 1
     plot(freq/1000,Ptf,'k')
     ylim([-20,20]);xlabel('Frequency (kHz)')
     title(sprintf('Estimated correction based on deployment %s',strrep([sn{favDepl}],'_','\_')))
-
+    
     
     figure(349);clf
     plot(freq/1000,correctedTFs);grid on;legend(gca,strrep(sn,'_','\_'),'location','eastoutside')
@@ -460,7 +474,7 @@ if 1
     hT = title(sprintf('%s: "Corrected" LSG based on %s',titleStr,strrep([sn{favDepl}],'_','\_')),'FontSize',FS2);
     set(hT,'Position',get(hT,'Position')+[0,lb*.06+3000*ptype,0])
     
-    opath = inDir;
+    opath = outDir;
     ofile = ['SingleLSG_Corrected_',saveName,'.jpg'];
     print('-f750','-djpeg','-r600',fullfile(opath,ofile))
     ofile2 = ['SingleLSG_Corrected_',saveName,'.tif'];

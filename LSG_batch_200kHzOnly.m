@@ -27,7 +27,7 @@ outDir = 'M:\Shared drives\MBARC_All\LSGs\auto_200kHz';
 %TFsFolder = 'I:\Shared drives\MBARC_TF';
 
 TFsFolder = 'C:\Users\HARP\Documents\TFs';
-LTSAdir = 'M:\Shared drives\MBARC_All\LTSAs\SOCAL\N';
+LTSAdir = 'M:\Shared drives\MBARC_All\LTSAs\GofMX\DT';
 [dirStem,siteName] = fileparts(LTSAdir);
 [~,projectName] = fileparts(dirStem);
 % initial changable parameters:
@@ -59,8 +59,8 @@ av = [100 100000 10 120];	% plot axis vector
 %     sthr = 0;
 % end
 % % sthr = 100; % set sthr high for no strum filter
-dirList = dir(fullfile(LTSAdir,[projectName,'*']));
-for iD = 1:length(dirList)
+dirList = dir(fullfile(LTSAdir,[projectName(1),'*']));
+for iD = 1:4%:length(dirList)
     if ~dirList(iD).isdir
         % if not a directory, continue to next folder.
         continue
@@ -103,6 +103,10 @@ for iD = 1:length(dirList)
         [tf_pathname, tf_file] = pick_TF_subdirs(tfNum,TFsFolder);
     catch
         disp('no matching TF found, skipping this deployment.')
+    end
+    if isempty(tf_file)
+        disp('no matching TF found, skipping this deployment.')
+        continue
     end
     % tfList = dir(TFsFolder);
     % tfMatch = [];

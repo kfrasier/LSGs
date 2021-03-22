@@ -131,6 +131,10 @@ nS = length(fn);    % number of *_DailyAves.mat files
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % number of days to plot
+% set Deployment Order
+% for iFN = 1:length(fn)
+%     strfind(fn{iFN},)
+% end
 load(fn{1})
 ta = floor(pmptime(1)) + poff - 1;
 load(fn{nS})
@@ -255,7 +259,11 @@ hold on
 for iDep = 1:length(deplStart)
     text(deplStart{iDep}+poff,lb*1.06+1500*ptype,0,strrep(sn{iDep},'_','\_'))
     if ~isempty(tf{iDep})
-        tfShort = strrep(tf{iDep},'_','\_');
+        if isstruct(tf{iDep})
+            tfShort = strrep(tf{iDep}.name,'_','\_');
+        else
+            tfShort = strrep(tf{iDep},'_','\_');
+        end
         text(deplStart{iDep}+poff,lb*1.03+500*ptype,0,tfShort(1:3))
         line([deplStart{iDep}+poff,deplStart{iDep}+poff],...
             [1e-2,lb], [z_max,z_max],'color','k','LineWidth',2,'linestyle','--')

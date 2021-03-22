@@ -117,6 +117,11 @@ for k = 1:nltsas    % loop over files
     H(cnt1:cnt2,3) = PARAMS.ltsa.byteloc;
     cnt1 = cnt2 + 1;
 end
+if cnt2 == 0
+    warning('No cuccessful LTSA reads for this deployment')
+    return
+end
+
 fn(logical(badLTSA)) = [];
 % % for removing 80kHz FIFO
 % if max(knave) == 38

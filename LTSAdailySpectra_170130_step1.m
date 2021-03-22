@@ -21,7 +21,8 @@ clear variables
 global PARAMS
 
 % Load Harp data summary:
-harpDataSummaryCSV = 'C:\Users\Hosei\Desktop\HARPdataSummary_20200122.csv';
+harpDataSummaryCSV = 'C:\Users\HARP\Documents\GitHub\LSGs\HARPdataSummary_20200122.csv';
+
 harpDataSummary = readtable(harpDataSummaryCSV);
 
 TFsFolder = 'E:\TFs';
